@@ -69,7 +69,7 @@ export const openAIProvider: ReceiptParserProvider = {
           role: "user",
           content: [
             { type: "input_text", text: basePrompt },
-            { type: "input_image", image_url: imageDataUrl }
+            { type: "input_image", image_url: imageDataUrl, detail: "auto" }
           ]
         }
       ],
