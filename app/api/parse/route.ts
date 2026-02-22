@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 const MAX_BYTES = 12 * 1024 * 1024;
 
 export async function POST(req: Request) {
+  console.log("starting parse request");
   try {
     const form = await req.formData();
     const file = form.get("file");
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
         }
       });
     }
-
+    console.log("finished parse request");
     return Response.json(receipt);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error.";
