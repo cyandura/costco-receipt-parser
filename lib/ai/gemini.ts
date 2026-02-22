@@ -107,14 +107,16 @@ const summarizeResponse = (response: unknown) => {
 export const geminiProvider: ReceiptParserProvider = {
   name: "gemini",
   async parseReceipt({ imageDataUrl }) {
+    console.log("inside gemini parse method");
     const apiKey = getApiKey();
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY (or GOOGLE_API_KEY) is not set.");
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    console.log("before parse data url method");
     const { mimeType, data } = parseDataUrl(imageDataUrl);
-
+    console.log("after parse data url method, before calling ai models generate content");
     const response = await ai.models.generateContent({
       model,
       contents: [
@@ -130,8 +132,10 @@ export const geminiProvider: ReceiptParserProvider = {
         temperature: 0.2
       }
     });
-
+    console.log("after calling ai models generate content");
+    console.log("before extracting response text");
     const text = extractResponseText(response);
+    console.log("before extracting response text");
     if (!text) {
       console.warn("Gemini response had no text content.", summarizeResponse(response));
       throw new Error("Gemini response did not include any text content.");

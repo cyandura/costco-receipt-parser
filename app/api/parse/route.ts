@@ -23,9 +23,9 @@ export async function POST(req: Request) {
 
     const mime = file.type || "image/jpeg";
     const dataUrl = `data:${mime};base64,${buffer.toString("base64")}`;
-
+    console.log("before parse reciept call");
     const receipt = await parseReceiptFromImage(dataUrl);
-
+    console.log("after parse reciept call");
     const { searchParams } = new URL(req.url);
     const format = (searchParams.get("format") || "json").toLowerCase();
 
