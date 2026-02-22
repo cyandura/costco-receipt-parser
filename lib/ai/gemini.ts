@@ -117,21 +117,27 @@ export const geminiProvider: ReceiptParserProvider = {
     console.log("before parse data url method");
     const { mimeType, data } = parseDataUrl(imageDataUrl);
     console.log("after parse data url method, before calling ai models generate content");
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        { text: basePrompt },
-        {
-          inlineData: {
-            mimeType,
-            data
+    var response;
+    try{
+      response = await ai.models.generateContent({
+        model,
+        contents: [
+          { text: basePrompt },
+          {
+            inlineData: {
+              mimeType,
+              data
+            }
           }
+        ],
+        config: {
+          temperature: 0.2
         }
-      ],
-      config: {
-        temperature: 0.2
-      }
-    });
+      });
+      
+    } catch(error){
+      console.log("error with the ai.models.generatecontent call, ", error, response)
+    }
     console.log("after calling ai models generate content");
     console.log("before extracting response text");
     const text = extractResponseText(response);
