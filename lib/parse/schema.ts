@@ -15,21 +15,21 @@ const optionalString = z
 
 export const receiptItemSchema = z.object({
   description: z.string().min(1),
-  sku: optionalString,
-  quantity: numberLike.default(1),
-  unitPrice: numberLike.default(0),
-  lineSubtotal: numberLike.default(0),
+  upc: optionalString,
+  baseCost: numberLike.default(0),
   discount: numberLike.default(0),
-  deposit: numberLike.default(0),
-  tax: numberLike.default(0),
-  finalTotal: numberLike.default(0),
-  notes: optionalString
+  taxed: z.boolean().default(false),
+  notes: optionalString,
+  partyShare: z.union([numberLike, z.null()]).optional(),
+  subtotalFormula: optionalString,
+  subtotalEach: numberLike.optional()
 });
 
 export const receiptSchema = z.object({
   merchant: z.string().optional(),
   location: z.string().optional(),
   currency: z.string().optional(),
+  partyName: z.string().optional(),
   items: z.array(receiptItemSchema),
   totals: z
     .object({

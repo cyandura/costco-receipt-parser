@@ -1,5 +1,6 @@
 import { receiptToCsv, receiptToXlsxBuffer } from "../../../lib/parse/export";
 import { receiptSchema } from "../../../lib/parse/schema";
+import { normalizeReceipt } from "../../../lib/parse/normalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const format = String(body.format || "csv").toLowerCase();
-    const receipt = receiptSchema.parse(body.receipt);
+    const receipt = normalizeReceipt(receiptSchema.parse(body.receipt));
 
     if (format === "xlsx") {
       const buffer = receiptToXlsxBuffer(receipt);

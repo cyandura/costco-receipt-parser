@@ -1,8 +1,10 @@
+import { claudeProvider } from "./claude";
 import { geminiProvider } from "./gemini";
 import { openAIProvider } from "./openai";
 import type { ReceiptParserProvider } from "./types";
 
 const providers: Record<string, ReceiptParserProvider> = {
+  claude: claudeProvider,
   gemini: geminiProvider,
   openai: openAIProvider
 };
