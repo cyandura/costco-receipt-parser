@@ -42,6 +42,8 @@ export const normalizeReceipt = (input: ReceiptParseInput): ReceiptParse => {
   return {
     ...input,
     items,
-    warnings
+    // Deduped because a saved receipt carries its warnings back in on the next
+    // save, and derived ones would otherwise pile up on every round trip.
+    warnings: Array.from(new Set(warnings))
   };
 };

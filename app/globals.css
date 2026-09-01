@@ -648,3 +648,77 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Shared sessions ---------- */
+
+/* The share page hides the uploader, leaving a single card to fill the row. */
+.card-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.share-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  animation: rise 0.6s ease-out;
+}
+
+.share-bar.editable {
+  border-left: 4px solid var(--accent-2);
+}
+
+.share-bar.readonly {
+  border-left: 4px solid var(--border-strong);
+}
+
+.share-status {
+  display: grid;
+  gap: 3px;
+}
+
+.share-status strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.share-status span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.share-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Locked cells should read as static values, not as broken inputs. */
+.grid.read-only .cell-input,
+.grid.read-only .party-header-input,
+.grid.read-only .party-select {
+  cursor: default;
+}
+
+.grid.read-only .cell-input:focus,
+.grid.read-only .party-header-input:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.grid.read-only .party-select:disabled {
+  opacity: 1;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+}
+
+.grid.read-only input[type="checkbox"]:disabled {
+  opacity: 0.75;
+}

@@ -26,6 +26,7 @@ type Props = {
   rows: GridRow[];
   subtotals: (number | null)[];
   partyName: string;
+  readOnly?: boolean;
   onPartyNameChange: (name: string) => void;
   onRowChange: (id: string, patch: Partial<GridRow>) => void;
   onDeleteRow: (id: string) => void;
@@ -52,19 +53,22 @@ function CellInput({
   value,
   onCommit,
   numeric,
-  placeholder
+  placeholder,
+  readOnly
 }: {
   value: string;
   onCommit: (text: string) => void;
   numeric?: boolean;
   placeholder?: string;
+  readOnly?: boolean;
 }) {
   return (
     <input
       key={value}
       className={`cell-input${numeric ? " num" : ""}`}
       defaultValue={value}
-      placeholder={placeholder}
+      placeholder={readOnly ? "" : placeholder}
+      readOnly={readOnly}
       inputMode={numeric ? "decimal" : undefined}
       onBlur={(event) => {
         if (event.target.value !== value) onCommit(event.target.value);
@@ -84,6 +88,7 @@ export default function ReceiptGrid({
   rows,
   subtotals,
   partyName,
+  readOnly = false,
   onPartyNameChange,
   onRowChange,
   onDeleteRow
@@ -119,7 +124,7 @@ export default function ReceiptGrid({
       case "G":
         return {
           text: `=${materializeTemplate(row.formula ?? DEFAULT_SUBTOTAL_TEMPLATE, excelRow)}`,
-          editable: true
+          editable: !readOnly
         };
       case "H":
         return { text: `=G${excelRow}*F${excelRow}`, editable: false };
@@ -160,7 +165,13 @@ export default function ReceiptGrid({
         <input
           value={barDraft}
           readOnly={!current.editable}
-          placeholder={selected ? "" : "Select a cell to inspect it — Subtotal formulas are editable"}
+          placeholder={
+            selected
+              ? ""
+              : readOnly
+                ? "Select a cell to inspect its formula"
+                : "Select a cell to inspect it — Subtotal formulas are editable"
+          }
           onChange={(event) => setBarDraft(event.target.value)}
           onBlur={commitFormula}
           onKeyDown={(event) => {
@@ -171,7 +182,7 @@ export default function ReceiptGrid({
             }
           }}
         />
-        {selected?.col === "G" && rows[selected.idx]?.formula ? (
+        {!readOnly && selected?.col === "G" && rows[selected.idx]?.formula ? (
           <button
             className="ghost"
             title="Restore the default subtotal formula"
@@ -183,7 +194,7 @@ export default function ReceiptGrid({
       </div>
 
       <div className="sheet-scroll">
-        <table className="grid">
+        <table className={`grid${readOnly ? " read-only" : ""}`}>
           <thead>
             <tr>
               <th className="row-num">#</th>
@@ -196,11 +207,12 @@ export default function ReceiptGrid({
                 <input
                   className="party-header-input"
                   value={partyName}
+                  readOnly={readOnly}
                   onChange={(event) => onPartyNameChange(event.target.value)}
                   onBlur={(event) => {
-                    if (!event.target.value.trim()) onPartyNameChange("Party 1");
+                    if (!readOnly && !event.target.value.trim()) onPartyNameChange("Party 1");
                   }}
-                  title="Rename this party"
+                  title={readOnly ? partyName : "Rename this party"}
                 />
               </th>
               <th style={{ width: 120 }}>Subtotal ea</th>
@@ -216,6 +228,7 @@ export default function ReceiptGrid({
                   <CellInput
                     value={row.label}
                     placeholder="Item name"
+                    readOnly={readOnly}
                     onCommit={(text) => onRowChange(row.id, { label: text || "Untitled item" })}
                   />
                 </td>
@@ -226,6 +239,7 @@ export default function ReceiptGrid({
                       numeric
                       value={row.baseCost ? String(row.baseCost) : ""}
                       placeholder="0.00"
+                      readOnly={readOnly}
                       onCommit={(text) => onRowChange(row.id, { baseCost: parseNumber(text) })}
                     />
                   </div>
@@ -237,6 +251,7 @@ export default function ReceiptGrid({
                       numeric
                       value={row.discount ? String(row.discount) : ""}
                       placeholder="0.00"
+                      readOnly={readOnly}
                       onCommit={(text) => {
                         const parsed = parseNumber(text);
                         // Discounts are stored negative, matching the receipt.
@@ -252,6 +267,7 @@ export default function ReceiptGrid({
                   <input
                     type="checkbox"
                     checked={row.taxed}
+                    disabled={readOnly}
                     onChange={(event) => onRowChange(row.id, { taxed: event.target.checked })}
                   />
                 </td>
@@ -259,6 +275,7 @@ export default function ReceiptGrid({
                   <CellInput
                     value={row.notes}
                     placeholder=""
+                    readOnly={readOnly}
                     onCommit={(text) => onRowChange(row.id, { notes: text })}
                   />
                 </td>
@@ -269,6 +286,7 @@ export default function ReceiptGrid({
                   <select
                     className={`party-select ${partyClass(row.partyShare)}`}
                     value={row.partyShare === null ? "" : String(row.partyShare)}
+                    disabled={readOnly}
                     onChange={(event) => {
                       const value = event.target.value;
                       onRowChange(row.id, {
@@ -296,13 +314,15 @@ export default function ReceiptGrid({
                   {money(owes[idx])}
                 </td>
                 <td className="delete-cell">
-                  <button
-                    className="row-delete"
-                    title="Delete row"
-                    onClick={() => onDeleteRow(row.id)}
-                  >
-                    ✕
-                  </button>
+                  {readOnly ? null : (
+                    <button
+                      className="row-delete"
+                      title="Delete row"
+                      onClick={() => onDeleteRow(row.id)}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
