@@ -84,6 +84,7 @@ export default function ReceiptEditor({ sessionId, initialReceipt }: Props) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isSharing, setIsSharing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Bumped by every user mutation; drives the debounced autosave.
@@ -208,6 +209,9 @@ export default function ReceiptEditor({ sessionId, initialReceipt }: Props) {
       const res = await fetch("/api/parse", { method: "POST", body: form });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
+        // 429 is the daily parsing quota — retrying today won't help, so keep
+        // the button disabled rather than letting them hammer it.
+        if (res.status === 429) setRateLimited(true);
         throw new Error(error.error || "Failed to parse receipt.");
       }
 
@@ -416,11 +420,11 @@ export default function ReceiptEditor({ sessionId, initialReceipt }: Props) {
                 </span>
               </div>
               <div className="actions">
-                <button onClick={handleParse} disabled={!file || isParsing}>
+                <button onClick={handleParse} disabled={!file || isParsing || rateLimited}>
                   {isParsing ? "Parsing…" : "Parse Receipt"}
                 </button>
               </div>
-              <p className="status">{status}</p>
+              <p className={`status${rateLimited ? " limit" : ""}`}>{status}</p>
             </div>
           ) : null}
 

@@ -1,5 +1,6 @@
 import { parseReceiptFromImage } from "../../../lib/parse/parseReceipt";
 import { receiptToCsv, receiptToXlsxBuffer } from "../../../lib/parse/export";
+import { consumeParseQuota } from "../../../lib/limits/quota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,18 @@ export async function POST(req: Request) {
     if (buffer.length > MAX_BYTES) {
       return Response.json({ error: "File too large (max 12MB)." }, { status: 400 });
     }
+
+    // This endpoint is unauthenticated and everything past this point spends
+    // the API key, so the quota is claimed before the model is ever called.
+    const quota = await consumeParseQuota(req);
+    if (!quota.allowed) {
+      console.log("parse request rejected by daily quota");
+      return Response.json(
+        { error: quota.message },
+        { status: 429, headers: { "Retry-After": String(quota.retryAfterSeconds) } }
+      );
+    }
+    console.log(`quota ok, ${quota.remaining} parse(s) left for this visitor today`);
 
     const mime = file.type || "image/jpeg";
     const dataUrl = `data:${mime};base64,${buffer.toString("base64")}`;

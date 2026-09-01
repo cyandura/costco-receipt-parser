@@ -722,3 +722,12 @@ select:focus-visible {
 .grid.read-only input[type="checkbox"]:disabled {
   opacity: 0.75;
 }
+
+/* Daily parse quota exhausted — a wall, not a transient error. */
+.status.limit {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+}

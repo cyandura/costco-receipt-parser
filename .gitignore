@@ -212,5 +212,5 @@ __marimo__/
 # Local test scripts
 test-local.cmd
 
-# Local session store (filesystem fallback for `next dev`)
-.sessions/
+# Local sessions + quota counters (filesystem fallback for `next dev`)
+.local-store/

@@ -14,11 +14,27 @@ Upload a Costco receipt image and export itemized CSV/XLSX with discounts, bottl
 - `POST /api/export` (JSON with `receipt` and `format`)
   - Response: CSV or XLSX file
 
-## Switching AI Providers
-Set `AI_PROVIDER` in `.env.local`. The provider is resolved in `lib/ai/index.ts`. Add a new provider by implementing `ReceiptParserProvider` in `lib/ai` and registering it.
+- `POST /api/sessions` (JSON with `receipt`)
+  - Response: `{ id, editToken }` for a shareable split
+- `GET /api/sessions/:id`
+  - Public read. Send `Authorization: Bearer <editToken>` to also get `canEdit: true`.
+- `PUT /api/sessions/:id` (JSON with `receipt`)
+  - Requires `Authorization: Bearer <editToken>`
 
-### Gemini
-1. Install the SDK: `npm install @google/genai`
-2. Set `AI_PROVIDER=gemini`
-3. Set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
-4. Optional: set `GEMINI_MODEL` (defaults to `gemini-2.5-flash`)
+## Receipt parsing
+Parsing runs on Claude via `lib/ai/claude.ts`.
+
+1. Set `CLAUDE_API_KEY` in `.env.local`
+2. Optional: set `CLAUDE_MODEL` (defaults to `claude-sonnet-4-6`)
+
+## Parse limits
+`POST /api/parse` is unauthenticated and spends the API key, so it is rate limited
+per UTC day. Both limits accept a number, or `off` to disable.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PARSE_LIMIT_PER_IP` | `2` | Parses one visitor may run per day |
+| `PARSE_LIMIT_GLOBAL` | `50` | Hard ceiling across all visitors per day |
+
+The per-IP limit keeps one visitor from hogging the budget; the global limit is
+what actually bounds the bill, since a determined caller can rotate IP addresses.

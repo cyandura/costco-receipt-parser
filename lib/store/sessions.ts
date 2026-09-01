@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import type { ReceiptParse } from "../parse/types";
+import { getDriver, isValidKey } from "./driver";
 
 export type SessionRecord = {
   version: 1;
@@ -14,71 +15,10 @@ export type SessionRecord = {
 export type PublicSession = Omit<SessionRecord, "editTokenHash" | "version">;
 
 const STORE_NAME = "receipt-sessions";
-const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-
-type Driver = {
-  kind: "netlify" | "filesystem";
-  read: (id: string) => Promise<SessionRecord | null>;
-  write: (id: string, record: SessionRecord) => Promise<void>;
-};
-
-const netlifyDriver = async (): Promise<Driver | null> => {
-  try {
-    const { getStore } = await import("@netlify/blobs");
-    // Strong consistency: a viewer opening the link seconds after the creator
-    // saves must not get a stale copy.
-    const store = getStore({ name: STORE_NAME, consistency: "strong" });
-    return {
-      kind: "netlify",
-      read: (id) => store.get(id, { type: "json" }) as Promise<SessionRecord | null>,
-      write: async (id, record) => {
-        await store.setJSON(id, record);
-      }
-    };
-  } catch {
-    // Blobs is unconfigured — running under plain `next dev` rather than
-    // `netlify dev`. Fall through to the filesystem driver.
-    return null;
-  }
-};
-
-const filesystemDriver = async (): Promise<Driver> => {
-  const { mkdir, readFile, writeFile } = await import("node:fs/promises");
-  const { join } = await import("node:path");
-  const dir = join(process.cwd(), ".sessions");
-
-  return {
-    kind: "filesystem",
-    read: async (id) => {
-      try {
-        return JSON.parse(await readFile(join(dir, `${id}.json`), "utf8")) as SessionRecord;
-      } catch {
-        return null;
-      }
-    },
-    write: async (id, record) => {
-      await mkdir(dir, { recursive: true });
-      await writeFile(join(dir, `${id}.json`), JSON.stringify(record, null, 2), "utf8");
-    }
-  };
-};
-
-let driverPromise: Promise<Driver> | null = null;
-
-const getDriver = (): Promise<Driver> => {
-  if (!driverPromise) {
-    driverPromise = (async () => {
-      const driver = (await netlifyDriver()) ?? (await filesystemDriver());
-      console.log(`[sessions] storage driver: ${driver.kind}`);
-      return driver;
-    })();
-  }
-  return driverPromise;
-};
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
-export const isValidSessionId = (id: string) => ID_PATTERN.test(id);
+export const isValidSessionId = (id: string) => isValidKey(id);
 
 /** Constant-time compare so a wrong token can't be recovered by timing. */
 export const verifyEditToken = (token: string | null, record: SessionRecord) => {
@@ -97,8 +37,9 @@ export const toPublicSession = (record: SessionRecord): PublicSession => ({
 
 export const getSession = async (id: string): Promise<SessionRecord | null> => {
   if (!isValidSessionId(id)) return null;
-  const driver = await getDriver();
-  return driver.read(id);
+  const driver = await getDriver(STORE_NAME);
+  const entry = await driver.read<SessionRecord>(id);
+  return entry?.value ?? null;
 };
 
 export const createSession = async (receipt: ReceiptParse) => {
@@ -117,7 +58,7 @@ export const createSession = async (receipt: ReceiptParse) => {
     updatedAt: now
   };
 
-  const driver = await getDriver();
+  const driver = await getDriver(STORE_NAME);
   await driver.write(id, record);
   return { id, editToken, record };
 };
@@ -128,7 +69,7 @@ export const updateSession = async (record: SessionRecord, receipt: ReceiptParse
     receipt,
     updatedAt: new Date().toISOString()
   };
-  const driver = await getDriver();
+  const driver = await getDriver(STORE_NAME);
   await driver.write(record.id, updated);
   return updated;
 };
