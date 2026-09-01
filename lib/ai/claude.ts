@@ -37,21 +37,25 @@ How to read the receipt:
 - Do not include a Mikay/Peters split field — that is left blank for the user to
   fill in later and is not part of what you extract.
 - Output monetary values as numbers (no $).
+- Keep the JSON as short as you can: omit any item field that would be empty,
+  zero, or false. Leave out "discount" when there is no discount, "taxed" when
+  the item is not taxed, and "notes" and "upc" when you have nothing to put in
+  them. Only "description" and "baseCost" appear on every row.
 
-Schema:
+Schema (the second item shows the short form for an ordinary row):
 {
   "merchant": "Costco",
   "location": "City, State",
-  "currency": "USD",
   "items": [
     {
       "description": "Item name as printed",
-      "upc": "UPC/item number",
-      "baseCost": 0,
-      "discount": 0,
-      "taxed": false,
+      "upc": "1234567",
+      "baseCost": 19.99,
+      "discount": -3.00,
+      "taxed": true,
       "notes": "Optional notes"
-    }
+    },
+    { "description": "ORGANIC BANANAS", "upc": "7654321", "baseCost": 4.99 }
   ],
   "totals": {
     "subtotal": 0,
@@ -59,8 +63,7 @@ Schema:
     "discounts": 0,
     "deposits": 0,
     "total": 0
-  },
-  "warnings": []
+  }
 }
 `.trim();
 

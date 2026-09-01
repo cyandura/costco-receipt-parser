@@ -14,6 +14,45 @@ const makeId = () =>
 const formatMoney = (value?: number | null) =>
   typeof value === "number" && Number.isFinite(value) ? `$${value.toFixed(2)}` : "—";
 
+// Claude downsamples images itself, and the ceiling depends on the model: 1568px
+// on the long edge before Opus 4.7, 2576px on Opus 4.7+ / Opus 5 / Sonnet 5. We
+// use the higher number so this never discards resolution the model could have
+// read — on an older model the API simply downsamples again, and a 12MB phone
+// photo still lands in the low hundreds of KB either way.
+const MAX_IMAGE_EDGE = 2576;
+const JPEG_QUALITY = 0.85;
+
+const downscaleForUpload = async (file: File): Promise<File> => {
+  try {
+    // "from-image" applies EXIF rotation; without it a phone photo can reach the
+    // model sideways, which wrecks the parse.
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      bitmap.close();
+      return file;
+    }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY)
+    );
+    if (!blob || blob.size >= file.size) return file;
+
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" });
+  } catch {
+    // Formats the browser can't decode (HEIC, for one) go up untouched.
+    return file;
+  }
+};
+
 const tokenKey = (id: string) => `receipt-session-token:${id}`;
 
 const readToken = (id: string) => {
@@ -200,11 +239,14 @@ export default function ReceiptEditor({ sessionId, initialReceipt }: Props) {
   const handleParse = async () => {
     if (!file) return;
     setIsParsing(true);
-    setStatus("Parsing receipt…");
+    setStatus("Preparing image…");
 
     try {
+      const upload = await downscaleForUpload(file);
+      setStatus("Parsing receipt…");
+
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", upload);
 
       const res = await fetch("/api/parse", { method: "POST", body: form });
       if (!res.ok) {
