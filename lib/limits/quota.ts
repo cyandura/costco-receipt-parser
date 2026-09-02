@@ -15,13 +15,13 @@ const parseLimit = (raw: string | undefined, fallback: number) => {
 };
 
 /** Parses one visitor may run per UTC day. `PARSE_LIMIT_PER_IP=off` disables. */
-export const perIpDailyLimit = () => parseLimit(process.env.PARSE_LIMIT_PER_IP, 2);
+export const perIpDailyLimit = () => parseLimit(process.env.PARSE_LIMIT_PER_IP, 4);
 
 /**
  * Hard ceiling on parses across all visitors per UTC day — the limit that
  * actually bounds the API bill, since a determined caller can rotate IPs.
  */
-export const globalDailyLimit = () => parseLimit(process.env.PARSE_LIMIT_GLOBAL, 50);
+export const globalDailyLimit = () => parseLimit(process.env.PARSE_LIMIT_GLOBAL, 10);
 
 const utcDay = (now: Date) => now.toISOString().slice(0, 10);
 

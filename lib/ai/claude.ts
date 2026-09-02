@@ -98,7 +98,14 @@ export const claudeProvider: ReceiptParserProvider = {
 
     const resp = await client.messages.create({
       model,
-      max_tokens: 4096,
+      // Shared budget for thinking plus the JSON, so it needs headroom for a
+      // long receipt — at 4096 a 60-item parse could truncate mid-object.
+      max_tokens: 8000,
+      // Opus 5 thinks by default. Keeping it adaptive but at medium effort
+      // preserves the cross-referencing that discount attribution and VOID
+      // pairing rely on, while spending far fewer tokens than the default high.
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium" },
       messages: [
         {
           role: "user",

@@ -33,8 +33,8 @@ per UTC day. Both limits accept a number, or `off` to disable.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PARSE_LIMIT_PER_IP` | `2` | Parses one visitor may run per day |
-| `PARSE_LIMIT_GLOBAL` | `50` | Hard ceiling across all visitors per day |
+| `PARSE_LIMIT_PER_IP` | `4` | Parses one visitor may run per day |
+| `PARSE_LIMIT_GLOBAL` | `10` | Hard ceiling across all visitors per day |
 
 The per-IP limit keeps one visitor from hogging the budget; the global limit is
 what actually bounds the bill, since a determined caller can rotate IP addresses.
