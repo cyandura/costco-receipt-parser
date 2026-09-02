@@ -76,6 +76,48 @@ const extractJson = (input: string) => {
   return input.slice(start, end + 1);
 };
 
+// Rates per million tokens. These are hand-maintained, so a stale entry here
+// yields a confidently wrong cost line — treat the number as a guide and trust
+// the raw token counts, which come straight from the API.
+const PRICING: Record<string, { input: number; output: number }> = {
+  "claude-opus-5": { input: 5, output: 25 },
+  "claude-opus-4-8": { input: 5, output: 25 },
+  "claude-sonnet-5": { input: 3, output: 15 },
+  "claude-sonnet-4-6": { input: 3, output: 15 },
+  "claude-haiku-4-5": { input: 1, output: 5 }
+};
+
+type UsageLike = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+};
+
+const logUsage = (modelId: string, usage: UsageLike | null | undefined) => {
+  if (!usage) return;
+
+  const input = usage.input_tokens ?? 0;
+  const output = usage.output_tokens ?? 0;
+  const cacheRead = usage.cache_read_input_tokens ?? 0;
+  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+
+  const rate = PRICING[modelId];
+  // Cache reads bill at roughly a tenth of the input rate; writes at full rate.
+  const cost = rate
+    ? `$${(
+        ((input + cacheWrite) * rate.input + cacheRead * rate.input * 0.1 + output * rate.output) /
+        1_000_000
+      ).toFixed(4)}`
+    : "unknown (no rate for this model)";
+
+  // output includes thinking tokens, so this is the true per-parse spend.
+  console.log(
+    `[parse usage] model=${modelId} input=${input} output=${output} ` +
+      `cacheRead=${cacheRead} cacheWrite=${cacheWrite} cost=${cost}`
+  );
+};
+
 const parseDataUrl = (dataUrl: string) => {
   const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
   if (!match) {
@@ -126,6 +168,8 @@ export const claudeProvider: ReceiptParserProvider = {
         },
       ],
     });
+
+    logUsage(model, resp.usage);
 
     const textBlock = resp.content.find((block: { type: string }) => block.type === "text");
     const text = textBlock && "text" in textBlock ? textBlock.text : "";
